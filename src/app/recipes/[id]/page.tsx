@@ -26,6 +26,24 @@ interface Recipe {
   }>
 }
 
+/**
+ * Page component that displays detailed information for a single recipe.
+ *
+ * Fetches recipe data based on the route `id` parameter from Supabase when configured,
+ * otherwise falls back to localStorage merged with built-in mock recipes. While loading
+ * shows a full-screen loading indicator; if no recipe is found the user is redirected
+ * back to the recipes list (or a "Recipe not found" view is shown briefly before redirect).
+ *
+ * The rendered UI includes the recipe image (or placeholder), title and description,
+ * cooking time, servings, external link (when present), meal type and dietary tag pills,
+ * and a detailed ingredients list. An Edit button links to the recipe edit route.
+ *
+ * Side effects:
+ * - Reads `id` from route params.
+ * - Navigates to /recipes on missing data or fetch errors.
+ *
+ * @returns The JSX element for the recipe detail page.
+ */
 export default function RecipeDetailPage() {
   const params = useParams()
   const router = useRouter()
