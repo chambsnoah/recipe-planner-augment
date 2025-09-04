@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink } from 'lucide-react'
+import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink, Trash2 } from 'lucide-react'
 import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
 import { formatCookingTime } from '@/lib/utils'
 
@@ -30,10 +30,11 @@ export default function RecipeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const recipeId = params.id as string
-  
+
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [loading, setLoading] = useState(true)
-  
+  const [deleting, setDeleting] = useState(false)
+
   const supabase = createSupabaseClient()
 
   useEffect(() => {
@@ -113,6 +114,46 @@ export default function RecipeDetailPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!recipe) return
+
+    const confirmed = window.confirm(`Are you sure you want to delete "${recipe.title}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      if (!hasValidSupabaseConfig()) {
+        // Delete from localStorage
+        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
+        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+
+        // Also remove from meal plans if present
+        const mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+
+        router.push('/recipes')
+        return
+      }
+
+      // TODO: Implement Supabase deletion
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId)
+
+      if (error) throw error
+
+      router.push('/recipes')
+    } catch (error) {
+      console.error('Error deleting recipe:', error)
+      alert('Error deleting recipe. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -184,13 +225,23 @@ export default function RecipeDetailPage() {
               )}
             </div>
           </div>
-          <Link
-            href={`/recipes/${recipe.id}/edit`}
-            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            <Edit className="h-4 w-4" />
-            <span>Edit Recipe</span>
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link
+              href={`/recipes/${recipe.id}/edit`}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <Edit className="h-4 w-4" />
+              <span>Edit Recipe</span>
+            </Link>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

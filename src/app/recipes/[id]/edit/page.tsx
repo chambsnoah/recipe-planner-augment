@@ -230,10 +230,21 @@ export default function EditRecipePage() {
       if (!hasValidSupabaseConfig()) {
         // Update in localStorage
         const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        const updatedRecipes = existingRecipes.map((recipe: Recipe) => 
-          recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
-        )
-        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+
+        // Check if recipe exists in localStorage
+        const recipeIndex = existingRecipes.findIndex((recipe: Recipe) => recipe.id === recipeId)
+
+        if (recipeIndex >= 0) {
+          // Update existing recipe
+          const updatedRecipes = existingRecipes.map((recipe: Recipe) =>
+            recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
+          )
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } else {
+          // Recipe doesn't exist in localStorage (it's a mock recipe), so add it as new
+          existingRecipes.push(updatedRecipe)
+          localStorage.setItem('recipes', JSON.stringify(existingRecipes))
+        }
 
         // Redirect without blocking alert
         router.push('/recipes')

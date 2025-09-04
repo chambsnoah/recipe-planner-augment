@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChefHat, Plus, Search, Clock, Users, Edit } from 'lucide-react'
+import { ChefHat, Plus, Search, Clock, Users, Edit, Trash2 } from 'lucide-react'
 import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
 import { formatCookingTime } from '@/lib/utils'
 
@@ -157,6 +157,43 @@ export default function RecipesPage() {
     }
   }
 
+  const handleDelete = async (recipeId: string, recipeTitle: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${recipeTitle}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      if (!hasValidSupabaseConfig()) {
+        // Delete from localStorage
+        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
+        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+
+        // Also remove from meal plans if present
+        const mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+
+        // Refresh the recipes list
+        fetchRecipes()
+        return
+      }
+
+      // TODO: Implement Supabase deletion
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId)
+
+      if (error) throw error
+
+      // Refresh the recipes list
+      fetchRecipes()
+    } catch (error) {
+      console.error('Error deleting recipe:', error)
+      alert('Error deleting recipe. Please try again.')
+    }
+  }
+
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (recipe.description && recipe.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -304,14 +341,25 @@ export default function RecipesPage() {
                 key={recipe.id}
                 className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow relative"
               >
-                {/* Edit Button */}
-                <Link
-                  href={`/recipes/${recipe.id}/edit`}
-                  className="absolute top-3 right-3 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Edit className="h-4 w-4 text-gray-600 hover:text-orange-600" />
-                </Link>
+                {/* Action Buttons */}
+                <div className="absolute top-3 right-3 z-10 flex space-x-2">
+                  <Link
+                    href={`/recipes/${recipe.id}/edit`}
+                    className="p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Edit className="h-4 w-4 text-gray-600 hover:text-orange-600" />
+                  </Link>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(recipe.id, recipe.title)
+                    }}
+                    className="p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 text-gray-600 hover:text-red-600" />
+                  </button>
+                </div>
 
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
