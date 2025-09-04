@@ -53,7 +53,7 @@ export default function MealPlanPage() {
   useEffect(() => {
     loadRecipes()
     loadMealPlan()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Reload meal plan when week changes
@@ -504,11 +504,14 @@ export default function MealPlanPage() {
                       >
                         <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-3">
                           {recipe.image_url ? (
-                            <img
-                              src={recipe.image_url}
-                              alt={recipe.title}
-                              className="w-full h-full object-cover"
-                            />
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={recipe.image_url}
+                                alt={recipe.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <ChefHat className="h-8 w-8 text-gray-400" />

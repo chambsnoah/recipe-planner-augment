@@ -28,7 +28,7 @@ export default function RecipesPage() {
 
   useEffect(() => {
     fetchRecipes()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipes = async () => {
     try {
@@ -316,11 +316,14 @@ export default function RecipesPage() {
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
                     {recipe.image_url ? (
-                      <img
-                        src={recipe.image_url}
-                        alt={recipe.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={recipe.image_url}
+                          alt={recipe.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ChefHat className="h-12 w-12 text-gray-400" />

@@ -11,16 +11,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - name: Use Node.js
+
+      - id: detect
+        name: Detect package manager
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "pkg=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "pkg=npm" >> $GITHUB_OUTPUT
+          fi
+
+      # Setup Node with appropriate caching depending on detected package manager
+      - name: Setup Node for npm
+        if: steps.detect.outputs.pkg == 'npm'
         uses: actions/setup-node@v4
         with:
           node-version: 18
-      - name: Install dependencies
+          cache: 'npm'
+
+      - name: Setup Node for pnpm
+        if: steps.detect.outputs.pkg == 'pnpm'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      # Only install pnpm when using pnpm
+      - name: Setup pnpm
+        if: steps.detect.outputs.pkg == 'pnpm'
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies (npm)
+        if: steps.detect.outputs.pkg == 'npm'
         run: npm ci
-      - name: Lint
+
+      - name: Install dependencies (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (npm)
+        if: steps.detect.outputs.pkg == 'npm'
         run: npm run lint
-      - name: Build
+
+      - name: Lint (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm run lint
+
+      - name: Build (npm)
+        if: steps.detect.outputs.pkg == 'npm'
         run: npm run build
+
+      - name: Build (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm run build

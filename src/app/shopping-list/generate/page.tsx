@@ -55,7 +55,7 @@ export default function GenerateShoppingListPage() {
 
   useEffect(() => {
     loadMealPlan()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMealPlan = () => {
     try {

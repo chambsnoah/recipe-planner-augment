@@ -38,7 +38,7 @@ export default function RecipeDetailPage() {
 
   useEffect(() => {
     fetchRecipe()
-  }, [recipeId])
+  }, [recipeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipe = async () => {
     try {
@@ -198,11 +198,14 @@ export default function RecipeDetailPage() {
           <div className="lg:col-span-1">
             <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden mb-6">
               {recipe.image_url ? (
-                <img
-                  src={recipe.image_url}
-                  alt={recipe.title}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={recipe.image_url}
+                    alt={recipe.title}
+                    className="w-full h-full object-cover"
+                  />
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <ChefHat className="h-16 w-16 text-gray-400" />

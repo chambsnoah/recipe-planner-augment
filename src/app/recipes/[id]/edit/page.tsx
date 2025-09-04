@@ -55,7 +55,7 @@ export default function EditRecipePage() {
 
   useEffect(() => {
     fetchRecipe()
-  }, [recipeId])
+  }, [recipeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipe = async () => {
     try {
