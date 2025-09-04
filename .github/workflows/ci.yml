@@ -21,20 +21,12 @@ jobs:
             echo "pkg=npm" >> $GITHUB_OUTPUT
           fi
 
-      # Setup Node with appropriate caching depending on detected package manager
-      - name: Setup Node for npm
-        if: steps.detect.outputs.pkg == 'npm'
+      # Setup Node (use Node 20 LTS) and enable package manager-specific cache
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: 'npm'
-
-      - name: Setup Node for pnpm
-        if: steps.detect.outputs.pkg == 'pnpm'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'pnpm'
+          node-version: 20
+          cache: ${{ steps.detect.outputs.pkg }}
 
       # Only install pnpm when using pnpm
       - name: Setup pnpm
