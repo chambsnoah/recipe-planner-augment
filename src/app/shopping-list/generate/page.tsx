@@ -50,7 +50,6 @@ export default function GenerateShoppingListPage() {
   const [generatedItems, setGeneratedItems] = useState<ShoppingListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-
   // const supabase = createSupabaseClient()
 
   useEffect(() => {
@@ -100,6 +99,8 @@ export default function GenerateShoppingListPage() {
   }
 
   const loadMealPlan = () => {
+    if (typeof window === 'undefined') return
+
     try {
       const savedMealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
 
@@ -222,6 +223,8 @@ export default function GenerateShoppingListPage() {
   }
 
   const saveShoppingList = () => {
+    if (typeof window === 'undefined') return
+
     try {
       // Load existing shopping list and merge with generated items
       const existingItems = JSON.parse(localStorage.getItem('shoppingList') || '[]')

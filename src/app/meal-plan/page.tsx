@@ -38,7 +38,6 @@ export default function MealPlanPage() {
   const [showRecipeModal, setShowRecipeModal] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{date: string, mealType: string} | null>(null)
   const [loading, setLoading] = useState(true)
-
   const weekStart = getWeekStart(currentWeek)
   const supabase = createSupabaseClient()
 
@@ -65,11 +64,13 @@ export default function MealPlanPage() {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and mock data
         let savedRecipes = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading recipes from localStorage:', error)
-          savedRecipes = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (error) {
+            console.error('Error loading recipes from localStorage:', error)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
@@ -226,6 +227,8 @@ export default function MealPlanPage() {
 
   const loadMealPlan = () => {
     // Load meal plan from localStorage
+    if (typeof window === 'undefined') return
+
     try {
       const savedMealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
 

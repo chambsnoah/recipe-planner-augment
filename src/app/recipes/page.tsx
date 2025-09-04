@@ -30,7 +30,6 @@ export default function RecipesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([])
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<string[]>([])
-
   const supabase = createSupabaseClient()
 
   useEffect(() => {
@@ -42,11 +41,13 @@ export default function RecipesPage() {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and combine with mock data
         let savedRecipes: Recipe[] = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (err) {
-          console.error('Error parsing recipes from localStorage:', err)
-          savedRecipes = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (err) {
+            console.error('Error parsing recipes from localStorage:', err)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
