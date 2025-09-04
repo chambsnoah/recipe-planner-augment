@@ -41,11 +41,11 @@ export default function RecipesPage() {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and combine with mock data
-        let savedRecipes = []
+        let savedRecipes: Recipe[] = []
         try {
           savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading from localStorage:', error)
+        } catch (err) {
+          console.error('Error parsing recipes from localStorage:', err)
           savedRecipes = []
         }
         const mockRecipes = [
@@ -181,7 +181,7 @@ export default function RecipesPage() {
         localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
 
         // Refresh the recipes list
-        fetchRecipes()
+        await fetchRecipes()
         return
       }
 
@@ -194,7 +194,7 @@ export default function RecipesPage() {
       if (error) throw error
 
       // Refresh the recipes list
-      fetchRecipes()
+      await fetchRecipes()
     } catch (error) {
       console.error('Error deleting recipe:', error)
       alert('Error deleting recipe. Please try again.')

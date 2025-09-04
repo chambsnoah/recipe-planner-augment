@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink, Trash2 } from 'lucide-react'
@@ -34,6 +34,13 @@ export default function RecipeDetailPage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const supabase = createSupabaseClient()
 
@@ -44,8 +51,14 @@ export default function RecipeDetailPage() {
   const fetchRecipe = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
-        // Load from localStorage and mock data
-        const savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        // Load from localStorage and mock data (resilient to corrupt data)
+        let savedRecipes: Recipe[] = []
+        try {
+          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing saved recipes from localStorage:', err)
+          savedRecipes = []
+        }
         const mockRecipes = [
           {
             id: '1',
@@ -93,7 +106,7 @@ export default function RecipeDetailPage() {
         if (foundRecipe) {
           setRecipe(foundRecipe)
         } else {
-          router.push('/recipes')
+          router.replace('/recipes')
         }
       } else {
         // TODO: Load from Supabase
@@ -108,9 +121,9 @@ export default function RecipeDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching recipe:', error)
-      router.push('/recipes')
+      router.replace('/recipes')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }
 
@@ -123,17 +136,39 @@ export default function RecipeDetailPage() {
     setDeleting(true)
     try {
       if (!hasValidSupabaseConfig()) {
-        // Delete from localStorage
-        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        // Delete from localStorage (resilient parsing)
+        let existingRecipes: Recipe[] = []
+        try {
+          existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing recipes from localStorage:', err)
+          existingRecipes = []
+        }
+
         const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
-        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        try {
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } catch (err) {
+          console.error('Error saving updated recipes to localStorage:', err)
+        }
 
         // Also remove from meal plans if present
-        const mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
-        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
-        localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+        let mealPlan: Array<{ recipe?: { id: string } }> = []
+        try {
+          mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        } catch (err) {
+          console.error('Error parsing mealPlan from localStorage:', err)
+          mealPlan = []
+        }
 
-        router.push('/recipes')
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        try {
+          localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+        } catch (err) {
+          console.error('Error saving updated mealPlan to localStorage:', err)
+        }
+
+        router.replace('/recipes')
         return
       }
 
@@ -145,12 +180,12 @@ export default function RecipeDetailPage() {
 
       if (error) throw error
 
-      router.push('/recipes')
+      router.replace('/recipes')
     } catch (error) {
       console.error('Error deleting recipe:', error)
       alert('Error deleting recipe. Please try again.')
     } finally {
-      setDeleting(false)
+      if (mountedRef.current) setDeleting(false)
     }
   }
 
