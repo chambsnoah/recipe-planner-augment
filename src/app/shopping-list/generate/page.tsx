@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChefHat, ShoppingCart, ArrowLeft, Check, Calendar, Plus } from 'lucide-react'
-import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
+// import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
 
 interface Ingredient {
   id: string
@@ -51,7 +51,7 @@ export default function GenerateShoppingListPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
 
-  const supabase = createSupabaseClient()
+  // const supabase = createSupabaseClient()
 
   useEffect(() => {
     loadMealPlan()
@@ -334,7 +334,7 @@ export default function GenerateShoppingListPage() {
                 <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No ingredients found</h3>
                 <p className="text-gray-600">
-                  The recipes in your meal plan don't have ingredient lists yet.
+                  The recipes in your meal plan don&apos;t have ingredient lists yet.
                 </p>
               </div>
             )}

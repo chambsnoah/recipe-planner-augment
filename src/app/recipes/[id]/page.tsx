@@ -130,7 +130,7 @@ export default function RecipeDetailPage() {
         <div className="text-center">
           <ChefHat className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Recipe not found</h2>
-          <p className="text-gray-600 mb-6">The recipe you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-6">The recipe you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/recipes"
             className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors"

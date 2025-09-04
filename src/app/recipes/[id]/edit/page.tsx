@@ -158,7 +158,7 @@ export default function EditRecipePage() {
     }
   }
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -180,7 +180,7 @@ export default function EditRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: any) => {
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
