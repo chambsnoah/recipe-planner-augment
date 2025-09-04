@@ -15,6 +15,13 @@ interface Recipe {
   servings: number
   meal_type: string[]
   dietary_tags: string[]
+  ingredients?: Array<{
+    id: string
+    name: string
+    quantity: number
+    unit: string
+    notes?: string
+  }>
 }
 
 export default function RecipesPage() {
