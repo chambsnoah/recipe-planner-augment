@@ -15,6 +15,13 @@ interface Recipe {
   servings: number
   meal_type: string[]
   dietary_tags: string[]
+  ingredients?: Array<{
+    id: string
+    name: string
+    quantity: number
+    unit: string
+    notes?: string
+  }>
 }
 
 interface MealPlanItem {
@@ -73,7 +80,13 @@ export default function MealPlanPage() {
             cooking_time: 25,
             servings: 4,
             meal_type: ['dinner'],
-            dietary_tags: ['gluten-free']
+            dietary_tags: ['gluten-free'],
+            ingredients: [
+              { id: '1', name: 'Chicken breast', quantity: 1, unit: 'lb', notes: 'cut into strips' },
+              { id: '2', name: 'Mixed vegetables', quantity: 2, unit: 'cups', notes: 'frozen or fresh' },
+              { id: '3', name: 'Soy sauce', quantity: 3, unit: 'tbsp', notes: '' },
+              { id: '4', name: 'Garlic', quantity: 2, unit: 'cloves', notes: 'minced' }
+            ]
           },
           {
             id: '2',
@@ -83,7 +96,14 @@ export default function MealPlanPage() {
             cooking_time: 5,
             servings: 1,
             meal_type: ['breakfast'],
-            dietary_tags: ['vegetarian']
+            dietary_tags: ['vegetarian'],
+            ingredients: [
+              { id: '1', name: 'Rolled oats', quantity: 0.5, unit: 'cup', notes: '' },
+              { id: '2', name: 'Milk', quantity: 0.5, unit: 'cup', notes: 'any type' },
+              { id: '3', name: 'Chia seeds', quantity: 1, unit: 'tbsp', notes: '' },
+              { id: '4', name: 'Honey', quantity: 1, unit: 'tsp', notes: 'or maple syrup' },
+              { id: '5', name: 'Berries', quantity: 0.25, unit: 'cup', notes: 'fresh or frozen' }
+            ]
           },
           {
             id: '3',
@@ -93,7 +113,14 @@ export default function MealPlanPage() {
             cooking_time: 10,
             servings: 2,
             meal_type: ['breakfast', 'lunch'],
-            dietary_tags: ['vegetarian', 'vegan']
+            dietary_tags: ['vegetarian', 'vegan'],
+            ingredients: [
+              { id: '1', name: 'Bread', quantity: 2, unit: 'slices', notes: 'whole grain' },
+              { id: '2', name: 'Avocado', quantity: 1, unit: 'large', notes: 'ripe' },
+              { id: '3', name: 'Lemon juice', quantity: 1, unit: 'tsp', notes: 'fresh' },
+              { id: '4', name: 'Salt', quantity: 0.25, unit: 'tsp', notes: 'to taste' },
+              { id: '5', name: 'Black pepper', quantity: 0.125, unit: 'tsp', notes: 'to taste' }
+            ]
           },
           {
             id: '4',
@@ -103,7 +130,15 @@ export default function MealPlanPage() {
             cooking_time: 15,
             servings: 4,
             meal_type: ['lunch', 'dinner'],
-            dietary_tags: ['vegetarian', 'gluten-free']
+            dietary_tags: ['vegetarian', 'gluten-free'],
+            ingredients: [
+              { id: '1', name: 'Cucumber', quantity: 1, unit: 'large', notes: 'diced' },
+              { id: '2', name: 'Tomatoes', quantity: 2, unit: 'large', notes: 'chopped' },
+              { id: '3', name: 'Red onion', quantity: 0.5, unit: 'medium', notes: 'sliced' },
+              { id: '4', name: 'Feta cheese', quantity: 4, unit: 'oz', notes: 'crumbled' },
+              { id: '5', name: 'Olive oil', quantity: 3, unit: 'tbsp', notes: 'extra virgin' },
+              { id: '6', name: 'Lemon juice', quantity: 2, unit: 'tbsp', notes: 'fresh' }
+            ]
           },
           {
             id: '5',
@@ -113,7 +148,15 @@ export default function MealPlanPage() {
             cooking_time: 45,
             servings: 24,
             meal_type: ['dessert', 'snack'],
-            dietary_tags: ['vegetarian']
+            dietary_tags: ['vegetarian'],
+            ingredients: [
+              { id: '1', name: 'All-purpose flour', quantity: 2.25, unit: 'cups', notes: '' },
+              { id: '2', name: 'Butter', quantity: 1, unit: 'cup', notes: 'softened' },
+              { id: '3', name: 'Brown sugar', quantity: 0.75, unit: 'cup', notes: 'packed' },
+              { id: '4', name: 'White sugar', quantity: 0.75, unit: 'cup', notes: '' },
+              { id: '5', name: 'Eggs', quantity: 2, unit: 'large', notes: '' },
+              { id: '6', name: 'Chocolate chips', quantity: 2, unit: 'cups', notes: 'semi-sweet' }
+            ]
           }
         ]
 
