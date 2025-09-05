@@ -31,6 +31,22 @@ interface MealPlanItem {
   mealType: string
 }
 
+/**
+ * Meal Plan page component that renders a weekly meal-planning UI.
+ *
+ * Renders a week-view grid of meals (breakfast, lunch, dinner, snack), controls for week navigation,
+ * quick action links, and a modal for selecting recipes to add to specific day/meal slots.
+ *
+ * Side effects:
+ * - Loads recipes from Supabase when configured; otherwise merges mock recipes with any saved recipes from localStorage.
+ * - Loads and persists the user's meal plan to localStorage.
+ *
+ * Interaction notes:
+ * - Selecting "Add Recipe" opens a modal to pick a recipe for a chosen date and meal type.
+ * - Adding/removing recipes updates the in-memory meal plan and persists changes to localStorage.
+ *
+ * @returns The Meal Plan page React element.
+ */
 export default function MealPlanPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [recipes, setRecipes] = useState<Recipe[]>([])

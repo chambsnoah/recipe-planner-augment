@@ -19,6 +19,11 @@ export const hasValidSupabaseConfig = (): boolean => {
 // Use any for client generics to avoid mismatches between local types and runtime shape
 export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey)
 
+/**
+ * Creates a browser-oriented Supabase client using the module's configured URL and anon key.
+ *
+ * Returns a Supabase client instance (typed as `any`) configured with `supabaseUrl` and `supabaseAnonKey`.
+ */
 export function createSupabaseClient(): any {
   return createBrowserClient<any>(supabaseUrl, supabaseAnonKey)
 }

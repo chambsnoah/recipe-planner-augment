@@ -27,6 +27,11 @@ interface Recipe {
   ingredients?: Ingredient[]
 }
 
+/**
+ * Client-side page component for editing a recipe.
+ *
+ * Renders a form to view and modify a recipe's metadata and ingredients. On mount it loads recipe data (preferring Supabase when configured, falling back to localStorage plus bundled mock recipes), populates local component state, and shows a loading indicator while fetching. Submitting the form updates the recipe in Supabase when configured or in localStorage otherwise, then navigates back to the recipes list. User-facing error conditions (missing recipe, fetch/update failures) trigger an alert and navigation to /recipes.
+ */
 export default function EditRecipePage() {
   const router = useRouter()
   const params = useParams()
