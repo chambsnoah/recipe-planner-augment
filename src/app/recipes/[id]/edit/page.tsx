@@ -50,13 +50,6 @@ export default function EditRecipePage() {
 
   const supabase = createSupabaseClient()
 
-  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
-  const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
-
-  useEffect(() => {
-    fetchRecipe()
-  }, [recipeId])
-
   const fetchRecipe = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
@@ -158,7 +151,14 @@ export default function EditRecipePage() {
     }
   }
 
-  const handleInputChange = (field: string, value: any) => {
+  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
+  const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
+
+  useEffect(() => {
+    fetchRecipe()
+  }, [recipeId])
+
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -180,7 +180,7 @@ export default function EditRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: any) => {
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number | undefined) => {
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
@@ -208,8 +208,8 @@ export default function EditRecipePage() {
 
       if (!hasValidSupabaseConfig()) {
         // Update in localStorage
-        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        const updatedRecipes = existingRecipes.map((recipe: Recipe) => 
+        const existingRecipes: Recipe[] = JSON.parse(localStorage.getItem('recipes') || '[]')
+        const updatedRecipes = existingRecipes.map((recipe: Recipe) =>
           recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
         )
         localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
