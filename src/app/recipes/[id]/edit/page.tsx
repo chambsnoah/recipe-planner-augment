@@ -55,7 +55,7 @@ export default function EditRecipePage() {
 
   useEffect(() => {
     fetchRecipe()
-  }, [recipeId])
+  }, [recipeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipe = async () => {
     try {
@@ -127,7 +127,7 @@ export default function EditRecipePage() {
           router.push('/recipes')
         }
       } else {
-        // TODO: Load from Supabase
+        // Load from Supabase
         const { data, error } = await supabase
           .from('recipes')
           .select('*')
@@ -135,18 +135,39 @@ export default function EditRecipePage() {
           .single()
 
         if (error) throw error
-        
-        if (data) {
+
+        // Typed shape for a recipe row returned from Supabase
+        type SupabaseRecipeRow = {
+          id: string
+          title: string
+          description?: string | null
+          image_url?: string | null
+          external_url?: string | null
+          cooking_time?: number | string | null
+          servings?: number | null
+          meal_type?: string[] | null
+          dietary_tags?: string[] | null
+          ingredients?: Ingredient[] | null
+        }
+
+        const recipeData = data as SupabaseRecipeRow | null
+
+        // Narrow and safely map fields into the component state
+        if (recipeData && recipeData.title) {
           setFormData({
-            title: data.title,
-            description: data.description || '',
-            image_url: data.image_url || '',
-            external_url: data.external_url || '',
-            cooking_time: data.cooking_time?.toString() || '',
-            servings: data.servings,
-            meal_type: data.meal_type,
-            dietary_tags: data.dietary_tags
+            title: recipeData.title,
+            description: recipeData.description ?? '',
+            image_url: recipeData.image_url ?? '',
+            external_url: recipeData.external_url ?? '',
+            cooking_time: recipeData.cooking_time != null ? String(recipeData.cooking_time) : '',
+            servings: recipeData.servings ?? 4,
+            meal_type: recipeData.meal_type ?? [],
+            dietary_tags: recipeData.dietary_tags ?? []
           })
+
+          if (Array.isArray(recipeData.ingredients) && recipeData.ingredients.length > 0) {
+            setIngredients(recipeData.ingredients)
+          }
         }
       }
     } catch (error) {
@@ -158,7 +179,7 @@ export default function EditRecipePage() {
     }
   }
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -180,7 +201,7 @@ export default function EditRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: any) => {
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
@@ -209,10 +230,21 @@ export default function EditRecipePage() {
       if (!hasValidSupabaseConfig()) {
         // Update in localStorage
         const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        const updatedRecipes = existingRecipes.map((recipe: Recipe) => 
-          recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
-        )
-        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+
+        // Check if recipe exists in localStorage
+        const recipeIndex = existingRecipes.findIndex((recipe: Recipe) => recipe.id === recipeId)
+
+        if (recipeIndex >= 0) {
+          // Update existing recipe
+          const updatedRecipes = existingRecipes.map((recipe: Recipe) =>
+            recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
+          )
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } else {
+          // Recipe doesn't exist in localStorage (it's a mock recipe), so add it as new
+          existingRecipes.push(updatedRecipe)
+          localStorage.setItem('recipes', JSON.stringify(existingRecipes))
+        }
 
         // Redirect without blocking alert
         router.push('/recipes')
@@ -220,19 +252,10 @@ export default function EditRecipePage() {
       }
 
       // TODO: Implement Supabase updating
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('recipes')
-        .update({
-          title: updatedRecipe.title,
-          description: updatedRecipe.description,
-          image_url: updatedRecipe.image_url,
-          external_url: updatedRecipe.external_url,
-          cooking_time: updatedRecipe.cooking_time,
-          servings: updatedRecipe.servings,
-          meal_type: updatedRecipe.meal_type,
-          dietary_tags: updatedRecipe.dietary_tags,
-          updated_at: updatedRecipe.updated_at
-        })
+        .update(updatedRecipe)
         .eq('id', recipeId)
 
       if (error) throw error

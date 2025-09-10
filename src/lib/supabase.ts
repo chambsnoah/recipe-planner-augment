@@ -5,26 +5,24 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
 // Check if we have valid Supabase configuration
-export const hasValidSupabaseConfig = () => {
-  // For now, always return false to use localStorage
-  // TODO: Implement proper Supabase configuration check
-  return false
-
-  // Original logic (commented out for now):
-  // return supabaseUrl !== 'https://placeholder.supabase.co' &&
-  //        supabaseUrl !== 'https://your-project.supabase.co' &&
-  //        supabaseAnonKey !== 'placeholder-key' &&
-  //        supabaseAnonKey !== 'your_supabase_anon_key_here' &&
-  //        supabaseUrl.includes('supabase.co') &&
-  //        !supabaseUrl.includes('your-project') &&
-  //        supabaseAnonKey.length > 20
+export const hasValidSupabaseConfig = (): boolean => {
+  // Basic validation to detect placeholder values and obvious misconfigurations
+  if (!supabaseUrl || !supabaseAnonKey) return false
+  if (supabaseUrl.includes('placeholder.supabase.co')) return false
+  if (supabaseUrl.includes('your-project')) return false
+  if (!supabaseUrl.includes('supabase.co')) return false
+  if (supabaseAnonKey.length < 20) return false
+  return true
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Use any for client generics to avoid mismatches between local types and runtime shape
+export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey)
 
-export function createSupabaseClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+export function createSupabaseClient(): any {
+  return createBrowserClient<any>(supabaseUrl, supabaseAnonKey)
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Database types will be generated here later
 export type Database = {

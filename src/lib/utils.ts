@@ -19,7 +19,8 @@ export function formatCookingTime(minutes: number): string {
 
 export function getDayName(dayIndex: number): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  return days[dayIndex]
+  const idx = Math.max(0, Math.min(6, Math.floor(dayIndex)))
+  return days[idx]
 }
 
 export function getWeekStart(date: Date): Date {
@@ -39,6 +40,7 @@ export function consolidateIngredients(recipeIngredients: Array<{
   unit?: string
   servings: number
   originalServings: number
+  recipeTitle?: string
 }>): Array<{
   name: string
   category: string
@@ -46,23 +48,34 @@ export function consolidateIngredients(recipeIngredients: Array<{
   unit: string
   recipes: string[]
 }> {
-  const consolidated = new Map()
+  type Entry = {
+    name: string
+    category: string
+    totalQuantity: number
+    unit: string
+    recipes: string[]
+  }
 
-  recipeIngredients.forEach(({ ingredient, quantity, unit, servings, originalServings }) => {
+  const consolidated = new Map<string, Entry>()
+
+  recipeIngredients.forEach(({ ingredient, quantity, unit, servings, originalServings, recipeTitle }) => {
     const adjustedQuantity = (quantity * servings) / originalServings
     const finalUnit = unit || ingredient.unit || 'unit'
-    const key = `${ingredient.name}-${finalUnit}`
+    const key = `${ingredient.name.toLowerCase().trim()}-${finalUnit}`
 
     if (consolidated.has(key)) {
-      const existing = consolidated.get(key)
+      const existing = consolidated.get(key) as Entry
       existing.totalQuantity += adjustedQuantity
+      if (recipeTitle && !existing.recipes.includes(recipeTitle)) {
+        existing.recipes.push(recipeTitle)
+      }
     } else {
       consolidated.set(key, {
         name: ingredient.name,
         category: ingredient.category,
         totalQuantity: adjustedQuantity,
         unit: finalUnit,
-        recipes: []
+        recipes: recipeTitle ? [recipeTitle] : []
       })
     }
   })

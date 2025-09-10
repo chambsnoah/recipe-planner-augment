@@ -15,6 +15,13 @@ interface Recipe {
   servings: number
   meal_type: string[]
   dietary_tags: string[]
+  ingredients?: Array<{
+    id: string
+    name: string
+    quantity: number
+    unit: string
+    notes?: string
+  }>
 }
 
 interface MealPlanItem {
@@ -31,7 +38,6 @@ export default function MealPlanPage() {
   const [showRecipeModal, setShowRecipeModal] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{date: string, mealType: string} | null>(null)
   const [loading, setLoading] = useState(true)
-
   const weekStart = getWeekStart(currentWeek)
   const supabase = createSupabaseClient()
 
@@ -46,74 +52,112 @@ export default function MealPlanPage() {
   useEffect(() => {
     loadRecipes()
     loadMealPlan()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Reload meal plan when week changes
     loadMealPlan()
-  }, [currentWeek])
+  }, [currentWeek]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadRecipes = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and mock data
         let savedRecipes = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading recipes from localStorage:', error)
-          savedRecipes = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (error) {
+            console.error('Error loading recipes from localStorage:', error)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
             id: '1',
             title: 'Chicken Stir Fry',
             description: 'Quick and healthy chicken stir fry with vegetables',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
             cooking_time: 25,
             servings: 4,
             meal_type: ['dinner'],
-            dietary_tags: ['gluten-free']
+            dietary_tags: ['gluten-free'],
+            ingredients: [
+              { id: '1', name: 'Chicken breast', quantity: 1, unit: 'lb', notes: 'cut into strips' },
+              { id: '2', name: 'Mixed vegetables', quantity: 2, unit: 'cups', notes: 'frozen or fresh' },
+              { id: '3', name: 'Tamari (gluten-free)', quantity: 3, unit: 'tbsp', notes: 'use gluten-free tamari or coconut aminos as a soy sauce alternative' },
+              { id: '4', name: 'Garlic', quantity: 2, unit: 'cloves', notes: 'minced' }
+            ]
           },
           {
             id: '2',
             title: 'Overnight Oats',
             description: 'Easy breakfast prep with oats, milk, and fruits',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop',
             cooking_time: 5,
             servings: 1,
             meal_type: ['breakfast'],
-            dietary_tags: ['vegetarian']
+            dietary_tags: ['vegetarian'],
+            ingredients: [
+              { id: '1', name: 'Rolled oats', quantity: 0.5, unit: 'cup', notes: '' },
+              { id: '2', name: 'Milk', quantity: 0.5, unit: 'cup', notes: 'any type' },
+              { id: '3', name: 'Chia seeds', quantity: 1, unit: 'tbsp', notes: '' },
+              { id: '4', name: 'Honey', quantity: 1, unit: 'tsp', notes: 'or maple syrup' },
+              { id: '5', name: 'Berries', quantity: 0.25, unit: 'cup', notes: 'fresh or frozen' }
+            ]
           },
           {
             id: '3',
             title: 'Avocado Toast',
             description: 'Simple and nutritious avocado toast with toppings',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=300&fit=crop',
             cooking_time: 10,
             servings: 2,
             meal_type: ['breakfast', 'lunch'],
-            dietary_tags: ['vegetarian', 'vegan']
+            dietary_tags: ['vegetarian', 'vegan'],
+            ingredients: [
+              { id: '1', name: 'Bread', quantity: 2, unit: 'slices', notes: 'whole grain' },
+              { id: '2', name: 'Avocado', quantity: 1, unit: 'large', notes: 'ripe' },
+              { id: '3', name: 'Lemon juice', quantity: 1, unit: 'tsp', notes: 'fresh' },
+              { id: '4', name: 'Salt', quantity: 0.25, unit: 'tsp', notes: 'to taste' },
+              { id: '5', name: 'Black pepper', quantity: 0.125, unit: 'tsp', notes: 'to taste' }
+            ]
           },
           {
             id: '4',
             title: 'Greek Salad',
             description: 'Fresh Mediterranean salad with feta cheese',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop',
             cooking_time: 15,
             servings: 4,
             meal_type: ['lunch', 'dinner'],
-            dietary_tags: ['vegetarian', 'gluten-free']
+            dietary_tags: ['vegetarian', 'gluten-free'],
+            ingredients: [
+              { id: '1', name: 'Cucumber', quantity: 1, unit: 'large', notes: 'diced' },
+              { id: '2', name: 'Tomatoes', quantity: 2, unit: 'large', notes: 'chopped' },
+              { id: '3', name: 'Red onion', quantity: 0.5, unit: 'medium', notes: 'sliced' },
+              { id: '4', name: 'Feta cheese', quantity: 4, unit: 'oz', notes: 'crumbled' },
+              { id: '5', name: 'Olive oil', quantity: 3, unit: 'tbsp', notes: 'extra virgin' },
+              { id: '6', name: 'Lemon juice', quantity: 2, unit: 'tbsp', notes: 'fresh' }
+            ]
           },
           {
             id: '5',
             title: 'Chocolate Chip Cookies',
             description: 'Classic homemade chocolate chip cookies',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&h=300&fit=crop',
             cooking_time: 45,
             servings: 24,
             meal_type: ['dessert', 'snack'],
-            dietary_tags: ['vegetarian']
+            dietary_tags: ['vegetarian'],
+            ingredients: [
+              { id: '1', name: 'All-purpose flour', quantity: 2.25, unit: 'cups', notes: '' },
+              { id: '2', name: 'Butter', quantity: 1, unit: 'cup', notes: 'softened' },
+              { id: '3', name: 'Brown sugar', quantity: 0.75, unit: 'cup', notes: 'packed' },
+              { id: '4', name: 'White sugar', quantity: 0.75, unit: 'cup', notes: '' },
+              { id: '5', name: 'Eggs', quantity: 2, unit: 'large', notes: '' },
+              { id: '6', name: 'Chocolate chips', quantity: 2, unit: 'cups', notes: 'semi-sweet' }
+            ]
           }
         ]
 
@@ -139,11 +183,79 @@ export default function MealPlanPage() {
     }
   }
 
+  const getMockRecipeIngredients = (recipeId: string) => {
+    const mockRecipes: Record<string, Array<{id: string; name: string; quantity: number; unit: string; notes: string}>> = {
+      '1': [
+        { id: '1', name: 'Chicken breast', quantity: 1, unit: 'lb', notes: 'cut into strips' },
+        { id: '2', name: 'Mixed vegetables', quantity: 2, unit: 'cups', notes: 'frozen or fresh' },
+        { id: '3', name: 'Tamari (gluten-free)', quantity: 3, unit: 'tbsp', notes: 'use gluten-free tamari or coconut aminos as a soy sauce alternative' },
+        { id: '4', name: 'Garlic', quantity: 2, unit: 'cloves', notes: 'minced' }
+      ],
+      '2': [
+        { id: '1', name: 'Rolled oats', quantity: 0.5, unit: 'cup', notes: '' },
+        { id: '2', name: 'Milk', quantity: 0.5, unit: 'cup', notes: 'any type' },
+        { id: '3', name: 'Chia seeds', quantity: 1, unit: 'tbsp', notes: '' },
+        { id: '4', name: 'Honey', quantity: 1, unit: 'tsp', notes: 'or maple syrup' },
+        { id: '5', name: 'Berries', quantity: 0.25, unit: 'cup', notes: 'fresh or frozen' }
+      ],
+      '3': [
+        { id: '1', name: 'Bread', quantity: 2, unit: 'slices', notes: 'whole grain' },
+        { id: '2', name: 'Avocado', quantity: 1, unit: 'large', notes: 'ripe' },
+        { id: '3', name: 'Lemon juice', quantity: 1, unit: 'tsp', notes: 'fresh' },
+        { id: '4', name: 'Salt', quantity: 0.25, unit: 'tsp', notes: 'to taste' },
+        { id: '5', name: 'Black pepper', quantity: 0.125, unit: 'tsp', notes: 'to taste' }
+      ],
+      '4': [
+        { id: '1', name: 'Cucumber', quantity: 1, unit: 'large', notes: 'diced' },
+        { id: '2', name: 'Tomatoes', quantity: 2, unit: 'large', notes: 'chopped' },
+        { id: '3', name: 'Red onion', quantity: 0.5, unit: 'medium', notes: 'sliced' },
+        { id: '4', name: 'Feta cheese', quantity: 4, unit: 'oz', notes: 'crumbled' },
+        { id: '5', name: 'Olive oil', quantity: 3, unit: 'tbsp', notes: 'extra virgin' },
+        { id: '6', name: 'Oregano', quantity: 1, unit: 'tsp', notes: 'dried' }
+      ],
+      '5': [
+        { id: '1', name: 'All-purpose flour', quantity: 2.25, unit: 'cups', notes: '' },
+        { id: '2', name: 'Butter', quantity: 1, unit: 'cup', notes: 'softened' },
+        { id: '3', name: 'Brown sugar', quantity: 0.75, unit: 'cup', notes: 'packed' },
+        { id: '4', name: 'White sugar', quantity: 0.75, unit: 'cup', notes: '' },
+        { id: '5', name: 'Eggs', quantity: 2, unit: 'large', notes: '' },
+        { id: '6', name: 'Chocolate chips', quantity: 2, unit: 'cups', notes: 'semi-sweet' }
+      ]
+    }
+    return mockRecipes[recipeId] || []
+  }
+
   const loadMealPlan = () => {
     // Load meal plan from localStorage
+    if (typeof window === 'undefined') return
+
     try {
       const savedMealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
-      setMealPlan(savedMealPlan)
+
+      // Auto-migrate meal plan data: add ingredients to recipes that don't have them
+      const migratedMealPlan = savedMealPlan.map((item: MealPlanItem) => {
+        if (item.recipe && !item.recipe.ingredients) {
+          // This recipe doesn't have ingredients, try to add them
+          const ingredients = getMockRecipeIngredients(item.recipe.id)
+          if (ingredients.length > 0) {
+            return {
+              ...item,
+              recipe: {
+                ...item.recipe,
+                ingredients
+              }
+            }
+          }
+        }
+        return item
+      })
+
+      // Save the migrated data back to localStorage
+      if (JSON.stringify(migratedMealPlan) !== JSON.stringify(savedMealPlan)) {
+        localStorage.setItem('mealPlan', JSON.stringify(migratedMealPlan))
+      }
+
+      setMealPlan(migratedMealPlan)
     } catch (error) {
       console.error('Error loading meal plan from localStorage:', error)
       setMealPlan([])
@@ -461,11 +573,14 @@ export default function MealPlanPage() {
                       >
                         <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-3">
                           {recipe.image_url ? (
-                            <img
-                              src={recipe.image_url}
-                              alt={recipe.title}
-                              className="w-full h-full object-cover"
-                            />
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={recipe.image_url}
+                                alt={recipe.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <ChefHat className="h-8 w-8 text-gray-400" />

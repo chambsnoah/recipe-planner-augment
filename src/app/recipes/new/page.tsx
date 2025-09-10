@@ -36,7 +36,7 @@ export default function NewRecipePage() {
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
   const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -58,7 +58,7 @@ export default function NewRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: any) => {
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
@@ -102,7 +102,7 @@ export default function NewRecipePage() {
       }
 
       // TODO: Implement Supabase saving
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('recipes')
         .insert([{
           title: recipe.title,
@@ -314,7 +314,7 @@ export default function NewRecipePage() {
             </div>
 
             <div className="space-y-4">
-              {ingredients.map((ingredient, index) => (
+              {ingredients.map((ingredient) => (
                 <div key={ingredient.id} className="grid grid-cols-12 gap-4 items-end">
                   <div className="col-span-5">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
