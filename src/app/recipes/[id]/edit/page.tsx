@@ -221,6 +221,7 @@ export default function EditRecipePage() {
   }
 
   const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
+
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
