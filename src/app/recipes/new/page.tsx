@@ -36,7 +36,8 @@ export default function NewRecipePage() {
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
   const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | string[]) => {
+
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -58,8 +59,9 @@ export default function NewRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number | undefined) => {
-    setIngredients(prev => prev.map(ing =>
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
+    setIngredients(prev => prev.map(ing => 
+
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
   }

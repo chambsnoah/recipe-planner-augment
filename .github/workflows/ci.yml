@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: detect
+        name: Detect package manager
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "pkg=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "pkg=npm" >> $GITHUB_OUTPUT
+          fi
+
+      # Setup Node (use Node 20 LTS) and enable package manager-specific cache
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: ${{ steps.detect.outputs.pkg }}
+
+      # Only install pnpm when using pnpm
+      - name: Setup pnpm
+        if: steps.detect.outputs.pkg == 'pnpm'
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies (npm)
+        if: steps.detect.outputs.pkg == 'npm'
+        run: npm ci
+
+      - name: Install dependencies (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (npm)
+        if: steps.detect.outputs.pkg == 'npm'
+        run: npm run lint
+
+      - name: Lint (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm run lint
+
+      - name: Build (npm)
+        if: steps.detect.outputs.pkg == 'npm'
+        run: npm run build
+
+      - name: Build (pnpm)
+        if: steps.detect.outputs.pkg == 'pnpm'
+        run: pnpm run build

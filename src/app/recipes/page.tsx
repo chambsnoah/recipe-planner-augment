@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChefHat, Plus, Search, Clock, Users, Edit } from 'lucide-react'
+import { ChefHat, Plus, Search, Clock, Users, Edit, Trash2 } from 'lucide-react'
 import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
 import { formatCookingTime } from '@/lib/utils'
 
@@ -15,6 +15,13 @@ interface Recipe {
   servings: number
   meal_type: string[]
   dietary_tags: string[]
+  ingredients?: Array<{
+    id: string
+    name: string
+    quantity: number
+    unit: string
+    notes?: string
+  }>
 }
 
 export default function RecipesPage() {
@@ -23,30 +30,31 @@ export default function RecipesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([])
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<string[]>([])
-
   const supabase = createSupabaseClient()
 
   useEffect(() => {
     fetchRecipes()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipes = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and combine with mock data
-        let savedRecipes = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading from localStorage:', error)
-          savedRecipes = []
+        let savedRecipes: Recipe[] = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (err) {
+            console.error('Error parsing recipes from localStorage:', err)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
             id: '1',
             title: 'Chicken Stir Fry',
             description: 'Quick and healthy chicken stir fry with vegetables',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
             cooking_time: 25,
             servings: 4,
             meal_type: ['dinner'],
@@ -62,7 +70,7 @@ export default function RecipesPage() {
             id: '2',
             title: 'Overnight Oats',
             description: 'Easy breakfast prep with oats, milk, and fruits',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop',
             cooking_time: 5,
             servings: 1,
             meal_type: ['breakfast'],
@@ -79,7 +87,7 @@ export default function RecipesPage() {
             id: '3',
             title: 'Avocado Toast',
             description: 'Simple and nutritious avocado toast with toppings',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=300&fit=crop',
             cooking_time: 10,
             servings: 2,
             meal_type: ['breakfast', 'lunch'],
@@ -96,7 +104,7 @@ export default function RecipesPage() {
             id: '4',
             title: 'Greek Salad',
             description: 'Fresh Mediterranean salad with feta cheese',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop',
             cooking_time: 15,
             servings: 4,
             meal_type: ['lunch', 'dinner'],
@@ -114,7 +122,7 @@ export default function RecipesPage() {
             id: '5',
             title: 'Chocolate Chip Cookies',
             description: 'Classic homemade chocolate chip cookies',
-            image_url: null,
+            image_url: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&h=300&fit=crop',
             cooking_time: 45,
             servings: 24,
             meal_type: ['dessert', 'snack'],
@@ -154,6 +162,43 @@ export default function RecipesPage() {
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (recipeId: string, recipeTitle: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${recipeTitle}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      if (!hasValidSupabaseConfig()) {
+        // Delete from localStorage
+        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
+        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+
+        // Also remove from meal plans if present
+        const mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+
+        // Refresh the recipes list
+        await fetchRecipes()
+        return
+      }
+
+      // TODO: Implement Supabase deletion
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId)
+
+      if (error) throw error
+
+      // Refresh the recipes list
+      await fetchRecipes()
+    } catch (error) {
+      console.error('Error deleting recipe:', error)
+      alert('Error deleting recipe. Please try again.')
     }
   }
 
@@ -304,23 +349,37 @@ export default function RecipesPage() {
                 key={recipe.id}
                 className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow relative"
               >
-                {/* Edit Button */}
-                <Link
-                  href={`/recipes/${recipe.id}/edit`}
-                  className="absolute top-3 right-3 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Edit className="h-4 w-4 text-gray-600 hover:text-orange-600" />
-                </Link>
+                {/* Action Buttons */}
+                <div className="absolute top-3 right-3 z-10 flex space-x-2">
+                  <Link
+                    href={`/recipes/${recipe.id}/edit`}
+                    className="p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Edit className="h-4 w-4 text-gray-600 hover:text-orange-600" />
+                  </Link>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(recipe.id, recipe.title)
+                    }}
+                    className="p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 text-gray-600 hover:text-red-600" />
+                  </button>
+                </div>
 
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
                     {recipe.image_url ? (
-                      <img
-                        src={recipe.image_url}
-                        alt={recipe.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={recipe.image_url}
+                          alt={recipe.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ChefHat className="h-12 w-12 text-gray-400" />

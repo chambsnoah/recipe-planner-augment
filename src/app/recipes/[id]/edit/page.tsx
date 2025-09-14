@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { ChefHat, Plus, X, Save, ArrowLeft } from 'lucide-react'
@@ -50,7 +50,7 @@ export default function EditRecipePage() {
 
   const supabase = createSupabaseClient()
 
-  const fetchRecipe = async () => {
+  const fetchRecipe = useCallback(async () => {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and mock data
@@ -120,7 +120,7 @@ export default function EditRecipePage() {
           router.push('/recipes')
         }
       } else {
-        // TODO: Load from Supabase
+        // Load from Supabase
         const { data, error } = await supabase
           .from('recipes')
           .select('*')
@@ -128,18 +128,61 @@ export default function EditRecipePage() {
           .single()
 
         if (error) throw error
-        
-        if (data) {
+
+        // Typed shape for a recipe row returned from Supabase
+        type SupabaseRecipeRow = {
+          id: string
+          title: string
+          description?: string | null
+          image_url?: string | null
+          external_url?: string | null
+          cooking_time?: number | string | null
+          servings?: number | null
+          meal_type?: string[] | null
+          dietary_tags?: string[] | null
+          ingredients?: Ingredient[] | null
+        }
+
+        const recipeData = data as SupabaseRecipeRow | null
+
+        // Narrow and safely map fields into the component state
+        if (recipeData && recipeData.title) {
           setFormData({
-            title: data.title,
-            description: data.description || '',
-            image_url: data.image_url || '',
-            external_url: data.external_url || '',
-            cooking_time: data.cooking_time?.toString() || '',
-            servings: data.servings,
-            meal_type: data.meal_type,
-            dietary_tags: data.dietary_tags
+            title: recipeData.title,
+            description: recipeData.description ?? '',
+            image_url: recipeData.image_url ?? '',
+            external_url: recipeData.external_url ?? '',
+            cooking_time: recipeData.cooking_time != null ? String(recipeData.cooking_time) : '',
+            servings: recipeData.servings ?? 4,
+            meal_type: recipeData.meal_type ?? [],
+            dietary_tags: recipeData.dietary_tags ?? []
           })
+
+          // Load ingredients
+          const { data: riData, error: riError } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+              quantity,
+              unit,
+              notes,
+              ingredients (
+                name
+              )
+            `)
+            .eq('recipe_id', recipeId)
+
+          if (riError) throw riError
+
+          if (riData && riData.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setIngredients(riData.map((ri: any) => ({
+              id: Date.now().toString() + Math.random().toString(36).substring(2),
+              name: ri.ingredients?.name || '',
+              quantity: ri.quantity,
+              unit: ri.unit || '',
+              notes: ri.notes || ''
+            })))
+          }
         }
       }
     } catch (error) {
@@ -149,14 +192,11 @@ export default function EditRecipePage() {
     } finally {
       setLoadingRecipe(false)
     }
-  }
-
-  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
-  const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
+  }, [recipeId, router, supabase])
 
   useEffect(() => {
     fetchRecipe()
-  }, [recipeId])
+  }, [fetchRecipe])
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -180,7 +220,8 @@ export default function EditRecipePage() {
     setIngredients(prev => prev.filter(ing => ing.id !== id))
   }
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number | undefined) => {
+  const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
+
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))
@@ -208,19 +249,30 @@ export default function EditRecipePage() {
 
       if (!hasValidSupabaseConfig()) {
         // Update in localStorage
-        const existingRecipes: Recipe[] = JSON.parse(localStorage.getItem('recipes') || '[]')
-        const updatedRecipes = existingRecipes.map((recipe: Recipe) =>
-          recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
-        )
-        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+
+        // Check if recipe exists in localStorage
+        const recipeIndex = existingRecipes.findIndex((recipe: Recipe) => recipe.id === recipeId)
+
+        if (recipeIndex >= 0) {
+          // Update existing recipe
+          const updatedRecipes = existingRecipes.map((recipe: Recipe) =>
+            recipe.id === recipeId ? { ...recipe, ...updatedRecipe } : recipe
+          )
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } else {
+          // Recipe doesn't exist in localStorage (it's a mock recipe), so add it as new
+          existingRecipes.push(updatedRecipe)
+          localStorage.setItem('recipes', JSON.stringify(existingRecipes))
+        }
 
         // Redirect without blocking alert
         router.push('/recipes')
         return
       }
 
-      // TODO: Implement Supabase updating
-      const { error } = await supabase
+      // Update recipe in Supabase
+      const { error: recipeError } = await supabase
         .from('recipes')
         .update({
           title: updatedRecipe.title,
@@ -235,7 +287,57 @@ export default function EditRecipePage() {
         })
         .eq('id', recipeId)
 
-      if (error) throw error
+      if (recipeError) throw recipeError
+
+      // Handle ingredients
+      // Delete existing links
+      await supabase
+        .from('recipe_ingredients')
+        .delete()
+        .eq('recipe_id', recipeId)
+
+      // Add new ones
+      for (const ing of ingredients.filter((i: Ingredient) => i.name.trim() !== '')) {
+        // Find existing ingredient or create new
+        const { data: existingIng, error: findError } = await supabase
+          .from('ingredients')
+          .select('id')
+          .eq('name', ing.name)
+          .maybeSingle()
+
+        if (findError) throw findError
+
+        let ingredient_id: string
+
+        if (existingIng) {
+          ingredient_id = existingIng.id
+        } else {
+          const { data: newIng, error: insertError } = await supabase
+            .from('ingredients')
+            .insert({
+              name: ing.name,
+              category: 'Other'
+            })
+            .select('id')
+            .single()
+
+          if (insertError) throw insertError
+          ingredient_id = newIng.id
+        }
+
+        // Insert junction
+        const { error: linkError } = await supabase
+          .from('recipe_ingredients')
+          .insert({
+            recipe_id: recipeId,
+            ingredient_id: ingredient_id,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            notes: ing.notes || null
+          })
+
+        if (linkError) throw linkError
+      }
 
       // Redirect without blocking alert
       router.push('/recipes')
@@ -389,7 +491,7 @@ export default function EditRecipePage() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Meal Types</h3>
             <div className="flex flex-wrap gap-3">
-              {mealTypes.map((type) => (
+              {['breakfast', 'lunch', 'dinner', 'snack', 'dessert'].map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -410,7 +512,7 @@ export default function EditRecipePage() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Dietary Tags</h3>
             <div className="flex flex-wrap gap-3">
-              {dietaryTags.map((tag) => (
+              {['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo'].map((tag) => (
                 <button
                   key={tag}
                   type="button"

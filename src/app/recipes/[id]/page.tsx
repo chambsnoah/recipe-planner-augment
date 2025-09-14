@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink } from 'lucide-react'
+import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink, Trash2 } from 'lucide-react'
 import { createSupabaseClient, hasValidSupabaseConfig } from '@/lib/supabase'
 import { formatCookingTime } from '@/lib/utils'
 
@@ -30,21 +30,35 @@ export default function RecipeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const recipeId = params.id as string
-  
+
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [loading, setLoading] = useState(true)
-  
+  const [deleting, setDeleting] = useState(false)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
   const supabase = createSupabaseClient()
 
   useEffect(() => {
     fetchRecipe()
-  }, [recipeId])
+  }, [recipeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecipe = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
-        // Load from localStorage and mock data
-        const savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        // Load from localStorage and mock data (resilient to corrupt data)
+        let savedRecipes: Recipe[] = []
+        try {
+          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing saved recipes from localStorage:', err)
+          savedRecipes = []
+        }
         const mockRecipes = [
           {
             id: '1',
@@ -92,10 +106,10 @@ export default function RecipeDetailPage() {
         if (foundRecipe) {
           setRecipe(foundRecipe)
         } else {
-          router.push('/recipes')
+          router.replace('/recipes')
         }
       } else {
-        // TODO: Load from Supabase
+        // Load from Supabase
         const { data, error } = await supabase
           .from('recipes')
           .select('*')
@@ -103,13 +117,115 @@ export default function RecipeDetailPage() {
           .single()
 
         if (error) throw error
-        setRecipe(data)
+        
+        if (data) {
+          // Load ingredients
+          const { data: riData, error: riError } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+              quantity,
+              unit,
+              notes,
+              ingredients (
+                name
+              )
+            `)
+            .eq('recipe_id', recipeId)
+
+          if (riError) throw riError
+
+          let ingredients: Array<{
+            id: string
+            name: string
+            quantity: number
+            unit: string
+            notes?: string
+          }> = []
+
+          if (riData && riData.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ingredients = riData.map((ri: any) => ({
+              id: Date.now().toString() + Math.random().toString(36).substring(2),
+              name: ri.ingredients.name,
+              quantity: ri.quantity,
+              unit: ri.unit || '',
+              notes: ri.notes || ''
+            }))
+          }
+
+          setRecipe({
+            ...data,
+            ingredients
+          } as Recipe)
+        }
       }
     } catch (error) {
       console.error('Error fetching recipe:', error)
-      router.push('/recipes')
+      router.replace('/recipes')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!recipe) return
+
+    const confirmed = window.confirm(`Are you sure you want to delete "${recipe.title}"? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      if (!hasValidSupabaseConfig()) {
+        // Delete from localStorage (resilient parsing)
+        let existingRecipes: Recipe[] = []
+        try {
+          existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing recipes from localStorage:', err)
+          existingRecipes = []
+        }
+
+        const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
+        try {
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } catch (err) {
+          console.error('Error saving updated recipes to localStorage:', err)
+        }
+
+        // Also remove from meal plans if present
+        let mealPlan: Array<{ recipe?: { id: string } }> = []
+        try {
+          mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        } catch (err) {
+          console.error('Error parsing mealPlan from localStorage:', err)
+          mealPlan = []
+        }
+
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        try {
+          localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+        } catch (err) {
+          console.error('Error saving updated mealPlan to localStorage:', err)
+        }
+
+        router.replace('/recipes')
+        return
+      }
+
+      // TODO: Implement Supabase deletion
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId)
+
+      if (error) throw error
+
+      router.replace('/recipes')
+    } catch (error) {
+      console.error('Error deleting recipe:', error)
+      alert('Error deleting recipe. Please try again.')
+    } finally {
+      if (mountedRef.current) setDeleting(false)
     }
   }
 
@@ -184,13 +300,23 @@ export default function RecipeDetailPage() {
               )}
             </div>
           </div>
-          <Link
-            href={`/recipes/${recipe.id}/edit`}
-            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            <Edit className="h-4 w-4" />
-            <span>Edit Recipe</span>
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link
+              href={`/recipes/${recipe.id}/edit`}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <Edit className="h-4 w-4" />
+              <span>Edit Recipe</span>
+            </Link>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -198,11 +324,14 @@ export default function RecipeDetailPage() {
           <div className="lg:col-span-1">
             <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden mb-6">
               {recipe.image_url ? (
-                <img
-                  src={recipe.image_url}
-                  alt={recipe.title}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={recipe.image_url}
+                    alt={recipe.title}
+                    className="w-full h-full object-cover"
+                  />
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <ChefHat className="h-16 w-16 text-gray-400" />
