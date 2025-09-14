@@ -334,7 +334,7 @@ export default function GenerateShoppingListPage() {
                 <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No ingredients found</h3>
                 <p className="text-gray-600">
-                  The recipes in your meal plan don't have ingredient lists yet.
+                  The recipes in your meal plan don&apos;t have ingredient lists yet.
                 </p>
               </div>
             )}
