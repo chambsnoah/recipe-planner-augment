@@ -109,7 +109,7 @@ export default function RecipeDetailPage() {
           router.replace('/recipes')
         }
       } else {
-        // TODO: Load from Supabase
+        // Load from Supabase
         const { data, error } = await supabase
           .from('recipes')
           .select('*')
@@ -117,7 +117,47 @@ export default function RecipeDetailPage() {
           .single()
 
         if (error) throw error
-        setRecipe(data)
+        
+        if (data) {
+          // Load ingredients
+          const { data: riData, error: riError } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+              quantity,
+              unit,
+              notes,
+              ingredients (
+                name
+              )
+            `)
+            .eq('recipe_id', recipeId)
+
+          if (riError) throw riError
+
+          let ingredients: Array<{
+            id: string
+            name: string
+            quantity: number
+            unit: string
+            notes?: string
+          }> = []
+
+          if (riData && riData.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ingredients = riData.map((ri: any) => ({
+              id: Date.now().toString() + Math.random().toString(36).substring(2),
+              name: ri.ingredients.name,
+              quantity: ri.quantity,
+              unit: ri.unit || '',
+              notes: ri.notes || ''
+            }))
+          }
+
+          setRecipe({
+            ...data,
+            ingredients
+          } as Recipe)
+        }
       }
     } catch (error) {
       console.error('Error fetching recipe:', error)
