@@ -24,6 +24,19 @@ interface Recipe {
   }>
 }
 
+/**
+ * RecipesPage component — displays and manages the user's recipe collection.
+ *
+ * Renders a searchable, filterable grid of recipe cards with view and edit actions.
+ * On mount it loads recipes: if Supabase is configured it fetches from the `recipes` table;
+ * otherwise it loads saved recipes from localStorage and merges them with built-in mock recipes.
+ * Filtering is performed client-side by search term, selected meal types, and dietary tags.
+ *
+ * The component is a client-side React page (renders loading and empty states) and returns
+ * the full page JSX for the recipes UI.
+ *
+ * @returns The page's React element tree for the recipes list and controls.
+ */
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)

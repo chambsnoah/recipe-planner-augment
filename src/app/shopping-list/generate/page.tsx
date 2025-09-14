@@ -44,6 +44,23 @@ interface ShoppingListItem {
   recipes: string[] // Track which recipes this ingredient comes from
 }
 
+/**
+ * Client component that builds a shopping list from a saved meal plan and provides a UI to review and save it.
+ *
+ * Loads the meal plan from localStorage on mount, aggregates ingredients across planned recipes (combining quantities
+ * by ingredient name + unit), assigns each ingredient to a category (Protein, Dairy, Vegetables, Fruits, Grains,
+ * Pantry, Other) using simple keyword matching, and exposes a save action that merges the generated items into the
+ * existing shopping list stored in localStorage. Handles loading and generation states and navigates to the shopping
+ * list page after a successful save.
+ *
+ * Side effects:
+ * - Reads from localStorage keys "mealPlan" and "shoppingList".
+ * - Writes the merged shopping list back to localStorage under "shoppingList".
+ * - Navigates using the Next.js router after saving.
+ *
+ * @returns The React component rendering the meal-plan summary, generated shopping list grouped by category,
+ *          loading indicators, and empty states.
+ */
 export default function GenerateShoppingListPage() {
   const router = useRouter()
   const [mealPlan, setMealPlan] = useState<MealPlanItem[]>([])

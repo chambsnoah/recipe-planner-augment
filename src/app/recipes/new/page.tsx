@@ -14,6 +14,25 @@ interface Ingredient {
   notes?: string
 }
 
+/**
+ * Page component that renders a form for creating and saving a new recipe.
+ *
+ * Renders the "Add New Recipe" UI, manages local form state (basic info, selected meal types
+ * and dietary tags, and a dynamic ingredients list), and handles saving the recipe either to
+ * Supabase (when configured) or to localStorage as a fallback. On successful save the page
+ * navigates to /recipes. The component also exposes UI-driven actions for adding, removing,
+ * and updating ingredients and for toggling multi-select arrays.
+ *
+ * Side effects:
+ * - Writes to localStorage when Supabase is not configured.
+ * - Attempts to insert a record into the `recipes` table via Supabase when configured.
+ * - Navigates to /recipes after a successful save.
+ *
+ * Required fields are enforced via form attributes (Recipe Title and Servings). Loading state
+ * disables the save button and shows a saving indicator while a save is in progress.
+ *
+ * @returns The JSX element for the New Recipe page.
+ */
 export default function NewRecipePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
