@@ -180,6 +180,13 @@ export default function EditRecipePage() {
   }
 
   const handleInputChange = (field: string, value: string | number | string[]) => {
+  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert']
+  const dietaryTags = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'low-fodmap', 'keto', 'paleo']
+
+  useEffect(() => {
+    fetchRecipe()
+  }, [recipeId])
+
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -202,6 +209,7 @@ export default function EditRecipePage() {
   }
 
   const updateIngredient = (id: string, field: keyof Ingredient, value: string | number) => {
+
     setIngredients(prev => prev.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
     ))

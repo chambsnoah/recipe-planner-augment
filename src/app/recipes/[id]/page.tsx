@@ -311,7 +311,7 @@ export default function RecipeDetailPage() {
                 )}
                 <div className="flex items-center space-x-3">
                   <Users className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-700">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
+<span className="text-gray-700">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
                 </div>
                 {recipe.external_url && (
                   <div className="flex items-center space-x-3">
