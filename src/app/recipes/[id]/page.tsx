@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ChefHat, Clock, Users, ArrowLeft, Edit, ExternalLink, Trash2 } from 'lucide-react'
@@ -26,6 +26,24 @@ interface Recipe {
   }>
 }
 
+/**
+ * Page component that displays detailed information for a single recipe.
+ *
+ * Fetches recipe data based on the route `id` parameter from Supabase when configured,
+ * otherwise falls back to localStorage merged with built-in mock recipes. While loading
+ * shows a full-screen loading indicator; if no recipe is found the user is redirected
+ * back to the recipes list (or a "Recipe not found" view is shown briefly before redirect).
+ *
+ * The rendered UI includes the recipe image (or placeholder), title and description,
+ * cooking time, servings, external link (when present), meal type and dietary tag pills,
+ * and a detailed ingredients list. An Edit button links to the recipe edit route.
+ *
+ * Side effects:
+ * - Reads `id` from route params.
+ * - Navigates to /recipes on missing data or fetch errors.
+ *
+ * @returns The JSX element for the recipe detail page.
+ */
 export default function RecipeDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -34,6 +52,13 @@ export default function RecipeDetailPage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const supabase = createSupabaseClient()
 
@@ -44,8 +69,14 @@ export default function RecipeDetailPage() {
   const fetchRecipe = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
-        // Load from localStorage and mock data
-        const savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        // Load from localStorage and mock data (resilient to corrupt data)
+        let savedRecipes: Recipe[] = []
+        try {
+          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing saved recipes from localStorage:', err)
+          savedRecipes = []
+        }
         const mockRecipes = [
           {
             id: '1',
@@ -93,10 +124,10 @@ export default function RecipeDetailPage() {
         if (foundRecipe) {
           setRecipe(foundRecipe)
         } else {
-          router.push('/recipes')
+          router.replace('/recipes')
         }
       } else {
-        // TODO: Load from Supabase
+        // Load from Supabase
         const { data, error } = await supabase
           .from('recipes')
           .select('*')
@@ -104,13 +135,53 @@ export default function RecipeDetailPage() {
           .single()
 
         if (error) throw error
-        setRecipe(data)
+        
+        if (data) {
+          // Load ingredients
+          const { data: riData, error: riError } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+              quantity,
+              unit,
+              notes,
+              ingredients (
+                name
+              )
+            `)
+            .eq('recipe_id', recipeId)
+
+          if (riError) throw riError
+
+          let ingredients: Array<{
+            id: string
+            name: string
+            quantity: number
+            unit: string
+            notes?: string
+          }> = []
+
+          if (riData && riData.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ingredients = riData.map((ri: any) => ({
+              id: Date.now().toString() + Math.random().toString(36).substring(2),
+              name: ri.ingredients.name,
+              quantity: ri.quantity,
+              unit: ri.unit || '',
+              notes: ri.notes || ''
+            }))
+          }
+
+          setRecipe({
+            ...data,
+            ingredients
+          } as Recipe)
+        }
       }
     } catch (error) {
       console.error('Error fetching recipe:', error)
-      router.push('/recipes')
+      router.replace('/recipes')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }
 
@@ -123,17 +194,39 @@ export default function RecipeDetailPage() {
     setDeleting(true)
     try {
       if (!hasValidSupabaseConfig()) {
-        // Delete from localStorage
-        const existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        // Delete from localStorage (resilient parsing)
+        let existingRecipes: Recipe[] = []
+        try {
+          existingRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+        } catch (err) {
+          console.error('Error parsing recipes from localStorage:', err)
+          existingRecipes = []
+        }
+
         const updatedRecipes = existingRecipes.filter((r: Recipe) => r.id !== recipeId)
-        localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        try {
+          localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
+        } catch (err) {
+          console.error('Error saving updated recipes to localStorage:', err)
+        }
 
         // Also remove from meal plans if present
-        const mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
-        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
-        localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+        let mealPlan: Array<{ recipe?: { id: string } }> = []
+        try {
+          mealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
+        } catch (err) {
+          console.error('Error parsing mealPlan from localStorage:', err)
+          mealPlan = []
+        }
 
-        router.push('/recipes')
+        const updatedMealPlan = mealPlan.filter((item: { recipe?: { id: string } }) => item.recipe?.id !== recipeId)
+        try {
+          localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
+        } catch (err) {
+          console.error('Error saving updated mealPlan to localStorage:', err)
+        }
+
+        router.replace('/recipes')
         return
       }
 
@@ -145,12 +238,12 @@ export default function RecipeDetailPage() {
 
       if (error) throw error
 
-      router.push('/recipes')
+      router.replace('/recipes')
     } catch (error) {
       console.error('Error deleting recipe:', error)
       alert('Error deleting recipe. Please try again.')
     } finally {
-      setDeleting(false)
+      if (mountedRef.current) setDeleting(false)
     }
   }
 
@@ -276,7 +369,7 @@ export default function RecipeDetailPage() {
                 )}
                 <div className="flex items-center space-x-3">
                   <Users className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-700">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
+<span className="text-gray-700">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
                 </div>
                 {recipe.external_url && (
                   <div className="flex items-center space-x-3">

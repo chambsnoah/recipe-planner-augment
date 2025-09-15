@@ -31,6 +31,22 @@ interface MealPlanItem {
   mealType: string
 }
 
+/**
+ * Meal Plan page component that renders a weekly meal-planning UI.
+ *
+ * Renders a week-view grid of meals (breakfast, lunch, dinner, snack), controls for week navigation,
+ * quick action links, and a modal for selecting recipes to add to specific day/meal slots.
+ *
+ * Side effects:
+ * - Loads recipes from Supabase when configured; otherwise merges mock recipes with any saved recipes from localStorage.
+ * - Loads and persists the user's meal plan to localStorage.
+ *
+ * Interaction notes:
+ * - Selecting "Add Recipe" opens a modal to pick a recipe for a chosen date and meal type.
+ * - Adding/removing recipes updates the in-memory meal plan and persists changes to localStorage.
+ *
+ * @returns The Meal Plan page React element.
+ */
 export default function MealPlanPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [recipes, setRecipes] = useState<Recipe[]>([])
@@ -38,7 +54,6 @@ export default function MealPlanPage() {
   const [showRecipeModal, setShowRecipeModal] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{date: string, mealType: string} | null>(null)
   const [loading, setLoading] = useState(true)
-
   const weekStart = getWeekStart(currentWeek)
   const supabase = createSupabaseClient()
 
@@ -58,18 +73,20 @@ export default function MealPlanPage() {
   useEffect(() => {
     // Reload meal plan when week changes
     loadMealPlan()
-  }, [currentWeek])
+  }, [currentWeek]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadRecipes = async () => {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and mock data
         let savedRecipes = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading recipes from localStorage:', error)
-          savedRecipes = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (error) {
+            console.error('Error loading recipes from localStorage:', error)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
@@ -182,11 +199,79 @@ export default function MealPlanPage() {
     }
   }
 
+  const getMockRecipeIngredients = (recipeId: string) => {
+    const mockRecipes: Record<string, Array<{id: string; name: string; quantity: number; unit: string; notes: string}>> = {
+      '1': [
+        { id: '1', name: 'Chicken breast', quantity: 1, unit: 'lb', notes: 'cut into strips' },
+        { id: '2', name: 'Mixed vegetables', quantity: 2, unit: 'cups', notes: 'frozen or fresh' },
+        { id: '3', name: 'Tamari (gluten-free)', quantity: 3, unit: 'tbsp', notes: 'use gluten-free tamari or coconut aminos as a soy sauce alternative' },
+        { id: '4', name: 'Garlic', quantity: 2, unit: 'cloves', notes: 'minced' }
+      ],
+      '2': [
+        { id: '1', name: 'Rolled oats', quantity: 0.5, unit: 'cup', notes: '' },
+        { id: '2', name: 'Milk', quantity: 0.5, unit: 'cup', notes: 'any type' },
+        { id: '3', name: 'Chia seeds', quantity: 1, unit: 'tbsp', notes: '' },
+        { id: '4', name: 'Honey', quantity: 1, unit: 'tsp', notes: 'or maple syrup' },
+        { id: '5', name: 'Berries', quantity: 0.25, unit: 'cup', notes: 'fresh or frozen' }
+      ],
+      '3': [
+        { id: '1', name: 'Bread', quantity: 2, unit: 'slices', notes: 'whole grain' },
+        { id: '2', name: 'Avocado', quantity: 1, unit: 'large', notes: 'ripe' },
+        { id: '3', name: 'Lemon juice', quantity: 1, unit: 'tsp', notes: 'fresh' },
+        { id: '4', name: 'Salt', quantity: 0.25, unit: 'tsp', notes: 'to taste' },
+        { id: '5', name: 'Black pepper', quantity: 0.125, unit: 'tsp', notes: 'to taste' }
+      ],
+      '4': [
+        { id: '1', name: 'Cucumber', quantity: 1, unit: 'large', notes: 'diced' },
+        { id: '2', name: 'Tomatoes', quantity: 2, unit: 'large', notes: 'chopped' },
+        { id: '3', name: 'Red onion', quantity: 0.5, unit: 'medium', notes: 'sliced' },
+        { id: '4', name: 'Feta cheese', quantity: 4, unit: 'oz', notes: 'crumbled' },
+        { id: '5', name: 'Olive oil', quantity: 3, unit: 'tbsp', notes: 'extra virgin' },
+        { id: '6', name: 'Oregano', quantity: 1, unit: 'tsp', notes: 'dried' }
+      ],
+      '5': [
+        { id: '1', name: 'All-purpose flour', quantity: 2.25, unit: 'cups', notes: '' },
+        { id: '2', name: 'Butter', quantity: 1, unit: 'cup', notes: 'softened' },
+        { id: '3', name: 'Brown sugar', quantity: 0.75, unit: 'cup', notes: 'packed' },
+        { id: '4', name: 'White sugar', quantity: 0.75, unit: 'cup', notes: '' },
+        { id: '5', name: 'Eggs', quantity: 2, unit: 'large', notes: '' },
+        { id: '6', name: 'Chocolate chips', quantity: 2, unit: 'cups', notes: 'semi-sweet' }
+      ]
+    }
+    return mockRecipes[recipeId] || []
+  }
+
   const loadMealPlan = () => {
     // Load meal plan from localStorage
+    if (typeof window === 'undefined') return
+
     try {
       const savedMealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
-      setMealPlan(savedMealPlan)
+
+      // Auto-migrate meal plan data: add ingredients to recipes that don't have them
+      const migratedMealPlan = savedMealPlan.map((item: MealPlanItem) => {
+        if (item.recipe && !item.recipe.ingredients) {
+          // This recipe doesn't have ingredients, try to add them
+          const ingredients = getMockRecipeIngredients(item.recipe.id)
+          if (ingredients.length > 0) {
+            return {
+              ...item,
+              recipe: {
+                ...item.recipe,
+                ingredients
+              }
+            }
+          }
+        }
+        return item
+      })
+
+      // Save the migrated data back to localStorage
+      if (JSON.stringify(migratedMealPlan) !== JSON.stringify(savedMealPlan)) {
+        localStorage.setItem('mealPlan', JSON.stringify(migratedMealPlan))
+      }
+
+      setMealPlan(migratedMealPlan)
     } catch (error) {
       console.error('Error loading meal plan from localStorage:', error)
       setMealPlan([])

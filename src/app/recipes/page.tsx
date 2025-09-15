@@ -24,13 +24,25 @@ interface Recipe {
   }>
 }
 
+/**
+ * RecipesPage component — displays and manages the user's recipe collection.
+ *
+ * Renders a searchable, filterable grid of recipe cards with view and edit actions.
+ * On mount it loads recipes: if Supabase is configured it fetches from the `recipes` table;
+ * otherwise it loads saved recipes from localStorage and merges them with built-in mock recipes.
+ * Filtering is performed client-side by search term, selected meal types, and dietary tags.
+ *
+ * The component is a client-side React page (renders loading and empty states) and returns
+ * the full page JSX for the recipes UI.
+ *
+ * @returns The page's React element tree for the recipes list and controls.
+ */
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([])
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<string[]>([])
-
   const supabase = createSupabaseClient()
 
   useEffect(() => {
@@ -41,12 +53,14 @@ export default function RecipesPage() {
     try {
       if (!hasValidSupabaseConfig()) {
         // Load from localStorage and combine with mock data
-        let savedRecipes = []
-        try {
-          savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
-        } catch (error) {
-          console.error('Error loading from localStorage:', error)
-          savedRecipes = []
+        let savedRecipes: Recipe[] = []
+        if (typeof window !== 'undefined') {
+          try {
+            savedRecipes = JSON.parse(localStorage.getItem('recipes') || '[]')
+          } catch (err) {
+            console.error('Error parsing recipes from localStorage:', err)
+            savedRecipes = []
+          }
         }
         const mockRecipes = [
           {
@@ -181,7 +195,7 @@ export default function RecipesPage() {
         localStorage.setItem('mealPlan', JSON.stringify(updatedMealPlan))
 
         // Refresh the recipes list
-        fetchRecipes()
+        await fetchRecipes()
         return
       }
 
@@ -194,7 +208,7 @@ export default function RecipesPage() {
       if (error) throw error
 
       // Refresh the recipes list
-      fetchRecipes()
+      await fetchRecipes()
     } catch (error) {
       console.error('Error deleting recipe:', error)
       alert('Error deleting recipe. Please try again.')
