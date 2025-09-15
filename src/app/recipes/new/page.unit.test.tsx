@@ -18,9 +18,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Under test - default export is the page component
-// The implementation file is named page.test.tsx in the PR, but it contains the page code.
-// Import via the directory route to pick up default export.
-import NewRecipePage from './page.test' // If the actual implementation is page.tsx/page.tsx, adjust this path accordingly.
+import NewRecipePage from './page'
 
 const mockPush = jest.fn()
 

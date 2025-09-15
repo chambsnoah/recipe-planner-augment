@@ -25,9 +25,9 @@ export function getDayName(dayIndex: number): string {
 
 export function getWeekStart(date: Date): Date {
   const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day
-  return new Date(d.setDate(diff))
+  const day = d.getUTCDay()
+  const diff = d.getUTCDate() - day
+  return new Date(d.setUTCDate(diff))
 }
 
 export function formatDate(date: Date): string {
