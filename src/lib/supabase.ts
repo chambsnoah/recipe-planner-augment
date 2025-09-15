@@ -20,9 +20,9 @@ export const hasValidSupabaseConfig = (): boolean => {
 export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey)
 
 /**
- * Creates a browser-oriented Supabase client using the module's configured URL and anon key.
+ * Create and return a browser-ready Supabase client using the module's configured URL and anon key.
  *
- * Returns a Supabase client instance (typed as `any`) configured with `supabaseUrl` and `supabaseAnonKey`.
+ * @returns A Supabase client instance (typed as `any`) configured for use in browser environments.
  */
 export function createSupabaseClient(): any {
   return createBrowserClient<any>(supabaseUrl, supabaseAnonKey)
