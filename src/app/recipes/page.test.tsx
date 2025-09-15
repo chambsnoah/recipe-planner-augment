@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, act } from '@testing-library/react'
 import userEventOrig from '@testing-library/user-event'
 
 // Allow tests to work if userEvent isn't configured; fall back to fireEvent-like typing/clicks
@@ -154,21 +154,25 @@ describe('RecipesPage - search and filters', () => {
     const mealSelect = selects[0] as HTMLSelectElement // First select should be meal types
     
     // Work with multi-select: select options programmatically
-    for (const opt of mealSelect.options) {
-      if (opt.value === 'breakfast') {
-        opt.selected = true
+    await act(async () => {
+      for (const opt of mealSelect.options) {
+        if (opt.value === 'breakfast') {
+          opt.selected = true
+        }
       }
-    }
-    mealSelect.dispatchEvent(new Event('change', { bubbles: true }))
+      mealSelect.dispatchEvent(new Event('change', { bubbles: true }))
+    })
 
     // Select dietary 'vegetarian'
     const dietarySelect = selects[1] as HTMLSelectElement // Second select should be dietary tags
-    for (const opt of dietarySelect.options) {
-      if (opt.value === 'vegetarian') {
-        opt.selected = true
+    await act(async () => {
+      for (const opt of dietarySelect.options) {
+        if (opt.value === 'vegetarian') {
+          opt.selected = true
+        }
       }
-    }
-    dietarySelect.dispatchEvent(new Event('change', { bubbles: true }))
+      dietarySelect.dispatchEvent(new Event('change', { bubbles: true }))
+    })
 
     // Expect "Overnight Oats" and "Avocado Toast" (both breakfast & vegetarian)
     expect(screen.getByText('Overnight Oats')).toBeInTheDocument()
@@ -185,10 +189,12 @@ describe('RecipesPage - search and filters', () => {
     // Choose dietary "keto" which is not present in mock data
     const selects = container.querySelectorAll('select')
     const dietarySelect = selects[1] as HTMLSelectElement
-    for (const opt of dietarySelect.options) {
-      if (opt.value === 'keto') opt.selected = true
-    }
-    dietarySelect.dispatchEvent(new Event('change', { bubbles: true }))
+    await act(async () => {
+      for (const opt of dietarySelect.options) {
+        if (opt.value === 'keto') opt.selected = true
+      }
+      dietarySelect.dispatchEvent(new Event('change', { bubbles: true }))
+    })
 
     expect(screen.getByText(/No recipes found/i)).toBeInTheDocument()
     expect(screen.getByText(/Try adjusting your search or filters/i)).toBeInTheDocument()
