@@ -5,6 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Format a duration given in minutes into a compact, human-readable string.
+ *
+ * If `minutes` is less than 60 the result is returned as "`X min`".
+ * For 60 or more minutes the result is "`H hr`" when there is no remainder,
+ * or "`H hr M min`" when there are remaining minutes. Hours are computed with
+ * `Math.floor(minutes / 60)` and remaining minutes are `minutes % 60`.
+ *
+ * @param minutes - Duration in minutes (may be fractional); hours are floored and the remainder is shown as minutes.
+ * @returns A compact string like `"45 min"`, `"2 hr"`, or `"1 hr 30 min"`.
+ */
 export function formatCookingTime(minutes: number): string {
   if (minutes < 60) {
     return `${minutes} min`
@@ -33,13 +44,14 @@ export function getDayName(dayIndex: number): string {
 }
 
 /**
- * Returns the start of the week (Sunday) for the given date in local time.
+ * Returns the Sunday that starts the week containing the given date, using UTC-based calendar calculations.
  *
- * The returned Date represents the Sunday of the same week as `date`.
- * The input `date` is not mutated; a new Date is returned. The returned value preserves the time component from the input but with its calendar day set to that week's Sunday.
+ * The function does not mutate the input; it creates and returns a new Date whose UTC calendar day is set to that week's Sunday.
+ * The time-of-day (hours/minutes/seconds/milliseconds) is preserved from the input date. Note: the computation uses UTC methods
+ * (getUTCDay/getUTCDate/setUTCDate), so the result corresponds to the week's start in UTC terms rather than local time.
  *
  * @param date - Reference date used to determine the week
- * @returns A new Date set to the Sunday of `date`'s week (local time)
+ * @returns A new Date set to the Sunday of `date`'s week (calculated using UTC)
  */
 export function getWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -48,6 +60,15 @@ export function getWeekStart(date: Date): Date {
   return new Date(d.setUTCDate(diff))
 }
 
+/**
+ * Formats a Date as an ISO date string (YYYY-MM-DD).
+ *
+ * The returned string represents the UTC date portion of `date` (derived from `date.toISOString()`),
+ * not the local-date representation. The input `date` is not mutated.
+ *
+ * @param date - The Date to format
+ * @returns The date in `YYYY-MM-DD` format
+ */
 export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
