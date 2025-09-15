@@ -44,26 +44,110 @@ interface ShoppingListItem {
   recipes: string[] // Track which recipes this ingredient comes from
 }
 
+/**
+ * Client component that builds a shopping list from a saved meal plan and provides a UI to review and save it.
+ *
+ * Loads the meal plan from localStorage on mount, aggregates ingredients across planned recipes (combining quantities
+ * by ingredient name + unit), assigns each ingredient to a category (Protein, Dairy, Vegetables, Fruits, Grains,
+ * Pantry, Other) using simple keyword matching, and exposes a save action that merges the generated items into the
+ * existing shopping list stored in localStorage. Handles loading and generation states and navigates to the shopping
+ * list page after a successful save.
+ *
+ * Side effects:
+ * - Reads from localStorage keys "mealPlan" and "shoppingList".
+ * - Writes the merged shopping list back to localStorage under "shoppingList".
+ * - Navigates using the Next.js router after saving.
+ *
+ * @returns The React component rendering the meal-plan summary, generated shopping list grouped by category,
+ *          loading indicators, and empty states.
+ */
 export default function GenerateShoppingListPage() {
   const router = useRouter()
   const [mealPlan, setMealPlan] = useState<MealPlanItem[]>([])
   const [generatedItems, setGeneratedItems] = useState<ShoppingListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-
   // const supabase = createSupabaseClient()
 
   useEffect(() => {
     loadMealPlan()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const getMockRecipeIngredients = (recipeId: string) => {
+    const mockRecipes: Record<string, Array<{id: string; name: string; quantity: number; unit: string; notes: string}>> = {
+      '1': [
+        { id: '1', name: 'Chicken breast', quantity: 1, unit: 'lb', notes: 'cut into strips' },
+        { id: '2', name: 'Mixed vegetables', quantity: 2, unit: 'cups', notes: 'frozen or fresh' },
+        { id: '3', name: 'Soy sauce', quantity: 3, unit: 'tbsp', notes: '' },
+        { id: '4', name: 'Garlic', quantity: 2, unit: 'cloves', notes: 'minced' }
+      ],
+      '2': [
+        { id: '1', name: 'Rolled oats', quantity: 0.5, unit: 'cup', notes: '' },
+        { id: '2', name: 'Milk', quantity: 0.5, unit: 'cup', notes: 'any type' },
+        { id: '3', name: 'Chia seeds', quantity: 1, unit: 'tbsp', notes: '' },
+        { id: '4', name: 'Honey', quantity: 1, unit: 'tsp', notes: 'or maple syrup' },
+        { id: '5', name: 'Berries', quantity: 0.25, unit: 'cup', notes: 'fresh or frozen' }
+      ],
+      '3': [
+        { id: '1', name: 'Bread slices', quantity: 2, unit: 'pieces', notes: 'whole grain preferred' },
+        { id: '2', name: 'Avocado', quantity: 1, unit: 'large', notes: 'ripe' },
+        { id: '3', name: 'Lemon juice', quantity: 1, unit: 'tsp', notes: '' },
+        { id: '4', name: 'Salt', quantity: 0.25, unit: 'tsp', notes: 'to taste' },
+        { id: '5', name: 'Cherry tomatoes', quantity: 4, unit: 'pieces', notes: 'optional' }
+      ],
+      '4': [
+        { id: '1', name: 'Cucumber', quantity: 1, unit: 'large', notes: 'diced' },
+        { id: '2', name: 'Tomatoes', quantity: 3, unit: 'medium', notes: 'chopped' },
+        { id: '3', name: 'Red onion', quantity: 0.5, unit: 'medium', notes: 'thinly sliced' },
+        { id: '4', name: 'Feta cheese', quantity: 4, unit: 'oz', notes: 'crumbled' },
+        { id: '5', name: 'Olive oil', quantity: 3, unit: 'tbsp', notes: 'extra virgin' },
+        { id: '6', name: 'Olives', quantity: 0.5, unit: 'cup', notes: 'kalamata' }
+      ],
+      '5': [
+        { id: '1', name: 'All-purpose flour', quantity: 2.25, unit: 'cups', notes: '' },
+        { id: '2', name: 'Butter', quantity: 1, unit: 'cup', notes: 'softened' },
+        { id: '3', name: 'Brown sugar', quantity: 0.75, unit: 'cup', notes: 'packed' },
+        { id: '4', name: 'White sugar', quantity: 0.75, unit: 'cup', notes: '' },
+        { id: '5', name: 'Eggs', quantity: 2, unit: 'large', notes: '' },
+        { id: '6', name: 'Chocolate chips', quantity: 2, unit: 'cups', notes: 'semi-sweet' }
+      ]
+    }
+    return mockRecipes[recipeId] || []
+  }
+
   const loadMealPlan = () => {
+    if (typeof window === 'undefined') return
+
     try {
       const savedMealPlan = JSON.parse(localStorage.getItem('mealPlan') || '[]')
-      setMealPlan(savedMealPlan)
-      
-      if (savedMealPlan.length > 0) {
-        generateShoppingList(savedMealPlan)
+
+      // Auto-migrate meal plan data: add ingredients to recipes that don't have them
+      const migratedMealPlan = savedMealPlan.map((item: MealPlanItem) => {
+        if (item.recipe && !item.recipe.ingredients) {
+          // This recipe doesn't have ingredients, try to add them
+          const ingredients = getMockRecipeIngredients(item.recipe.id)
+          if (ingredients.length > 0) {
+            return {
+              ...item,
+              recipe: {
+                ...item.recipe,
+                ingredients
+              }
+            }
+          }
+        }
+        return item
+      })
+
+      // Save the migrated data back to localStorage
+      if (JSON.stringify(migratedMealPlan) !== JSON.stringify(savedMealPlan)) {
+        localStorage.setItem('mealPlan', JSON.stringify(migratedMealPlan))
+      }
+
+      setMealPlan(migratedMealPlan)
+
+      if (migratedMealPlan.length > 0) {
+        generateShoppingList(migratedMealPlan)
       }
     } catch (error) {
       console.error('Error loading meal plan:', error)
@@ -156,6 +240,8 @@ export default function GenerateShoppingListPage() {
   }
 
   const saveShoppingList = () => {
+    if (typeof window === 'undefined') return
+
     try {
       // Load existing shopping list and merge with generated items
       const existingItems = JSON.parse(localStorage.getItem('shoppingList') || '[]')
